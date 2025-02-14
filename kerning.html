@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Customizable Random Word Generator</title>
+  <style>
+    /* Global resets and body font */
+    * { box-sizing: border-box; }
+    body { 
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif; 
+      margin: 0; 
+      padding: 20px; 
+    }
+    h1, h2 { margin-top: 0; }
+    
+    /* Three-column layout */
+    .container {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+    .column {
+      width: 33.33%;
+      flex: 1;
+      min-width: 300px;
+    }
+    /* Output column styling */
+    .output-column {
+      background-color: #f0f0f0;
+      padding: 20px;
+      position: relative; /* For positioning the copy button */
+      overflow-y: auto;
+    }
+    
+    /* Fieldset styling */
+    fieldset {
+      margin-bottom: 15px;
+      padding: 10px;
+    }
+    legend {
+      font-weight: bold;
+      padding: 0 5px;
+    }
+    
+    /* Input groups and checkboxes */
+    .input-group {
+      margin-bottom: 10px;
+    }
+    .input-group label {
+      display: block;
+      margin-bottom: 5px;
+    }
+    input[type="number"], select, textarea, input[type="range"] {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 5px;
+    }
+    .checkbox-line {
+      display: flex;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .checkbox-line label {
+      margin-left: 5px;
+    }
+    
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    
+    /* Copy-to-clipboard button positioned at top right of output area */
+    #copyBtn {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      z-index: 2;
+    }
+    /* Give the output text some top padding so it's not hidden by the copy button */
+    #result {
+      margin-top: 40px;
+      word-wrap: break-word;
+    }
+    
+    /* Responsive layout: stack columns vertically on narrow screens */
+    @media (max-width: 768px) {
+      .column { width: 100%; }
+      .container { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <h1>Random Word Generator</h1>
+  
+  <div class="container">
+    <!-- Column 1: Word Settings & Custom Extra Letters -->
+    <div class="column" id="col1">
+      <fieldset>
+        <legend>Word Settings</legend>
+        <div class="input-group">
+          <label for="numWords">Number of Words:</label>
+          <input type="number" id="numWords" min="1" value="5" />
+        </div>
+        <div class="input-group">
+          <label for="minLetters">Min Letters per Word:</label>
+          <input type="number" id="minLetters" min="1" value="2" />
+        </div>
+        <div class="input-group">
+          <label for="maxLetters">Max Letters per Word:</label>
+          <input type="number" id="maxLetters" min="1" value="10" />
+        </div>
+        <div class="input-group">
+          <label for="letterStyle">Letter Style:</label>
+          <select id="letterStyle">
+            <option value="lowercase">Lowercase</option>
+            <option value="uppercase">Uppercase</option>
+            <option value="camelcase">CamelCase</option>
+            <option value="titlecase">Title Case</option>
+            <option value="Numbers">Numbers</option>
+          </select>
+        </div>
+        <div class="checkbox-line">
+          <input type="checkbox" id="imitate" />
+          <label for="imitate">Imitate (force vowel after N consecutive consonants)</label>
+        </div>
+        <div class="input-group" id="imitateThresholdGroup">
+          <label for="imitateThreshold">Consecutive Letters Threshold (default is 2):</label>
+          <input type="number" id="imitateThreshold" min="1" value="2" />
+        </div>
+      </fieldset>
+      
+      <fieldset>
+        <legend>Custom Extra Letters</legend>
+        <div class="input-group">
+          <label for="extraLetters">Additional Letters (used based on probability):</label>
+          <textarea id="extraLetters" rows="3" placeholder="Enter extra letters here"></textarea>
+        </div>
+        <div class="input-group">
+          <label for="extraProbability">
+            Probability to use additional letters: <span id="extraProbabilityValue">50%</span>
+          </label>
+          <input type="range" id="extraProbability" min="0" max="100" value="50">
+        </div>
+      </fieldset>
+    </div>
+    
+    <!-- Column 2: Additional European Letters, Interpunctation Settings & Generate Button -->
+    <div class="column">
+      <fieldset>
+        <legend>Additional European Letters</legend>
+        <div class="checkbox-line">
+          <input type="checkbox" id="addGerman" />
+          <label for="addGerman">Add German Letters (ü, ö, ä, ß)</label>
+        </div>
+        <div class="checkbox-line">
+          <input type="checkbox" id="addFrench" />
+          <label for="addFrench">Add French Letters (à, â, ç, é, è, ê, ë, î, ï, ô, ù, û, ü, ÿ)</label>
+        </div>
+        <div class="checkbox-line">
+          <input type="checkbox" id="addItalian" />
+          <label for="addItalian">Add Italian Letters (à, è, é, ì, ò, ù)</label>
+        </div>
+        <div class="checkbox-line">
+          <input type="checkbox" id="addPolish" />
+          <label for="addPolish">Add Polish Letters (ą, ć, ę, ł, ń, ó, ś, ź, ż)</label>
+        </div>
+        <div class="checkbox-line">
+          <input type="checkbox" id="addCzech" />
+          <label for="addCzech">Add Czech Letters (á, č, ď, é, ě, í, ň, ó, ř, š, ť, ú, ů, ý, ž)</label>
+        </div>
+        <div class="checkbox-line">
+          <input type="checkbox" id="addScandinavian" />
+          <label for="addScandinavian">Add Scandinavian Letters (æ, ø, å, ä, ö)</label>
+        </div>
+        <div class="checkbox-line">
+          <input type="checkbox" id="addIcelandic" />
+          <label for="addIcelandic">Add Icelandic Letters (á, ð, é, í, ó, ú, ý, þ, æ, ö)</label>
+        </div>
+        <div class="checkbox-line">
+          <input type="checkbox" id="addDutch" />
+          <label for="addDutch">Add Dutch Letters (á, é, è, ë, ï, ó, ö, ü)</label>
+        </div>
+      </fieldset>
+      
+      <fieldset>
+        <legend>Interpunctation Settings</legend>
+        <div class="checkbox-line">
+          <input type="checkbox" id="addInterpunctation" />
+          <label for="addInterpunctation">Add Interpunctation</label>
+        </div>
+        <div class="input-group">
+          <label for="beforeChance">
+            Probability to prepend punctuation: <span id="beforeChanceValue">30%</span>
+          </label>
+          <input type="range" id="beforeChance" min="0" max="100" value="30">
+        </div>
+        <div class="input-group">
+          <label for="afterChance">
+            Probability to append punctuation: <span id="afterChanceValue">30%</span>
+          </label>
+          <input type="range" id="afterChance" min="0" max="100" value="30">
+        </div>
+      </fieldset>
+      
+      <!-- Generate Button at the bottom of Column 2 -->
+      <div class="input-group">
+        <button id="generateBtn">Generate Random Words</button>
+      </div>
+    </div>
+    
+    <!-- Column 3: Output Column -->
+    <div class="column output-column" id="outputColumn">
+      <!-- Copy to Clipboard button at the top right of the output area -->
+      <button id="copyBtn">copy to clipboard</button>
+      <div id="result"></div>
+    </div>
+  </div>
+  
+  <script>
+    // Transform the word based on the selected style.
+    function transformWord(word, style) {
+      if (style === 'uppercase') {
+        return word.toUpperCase();
+      } else if (style === 'lowercase') {
+        return word.toLowerCase();
+      } else if (style === 'camelcase') {
+        let transformed = "";
+        for (let i = 0; i < word.length; i++) {
+          transformed += (i % 2 === 0) ? word[i].toLowerCase() : word[i].toUpperCase();
+        }
+        return transformed;
+      } else if (style === 'titlecase') {
+        return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+      } else if (style === 'Numbers') {
+        return word; // Do not transform numbers.
+      }
+      return word;
+    }
+    
+    // Update slider display values.
+    document.getElementById('extraProbability').addEventListener('input', function() {
+      document.getElementById('extraProbabilityValue').textContent = this.value + '%';
+    });
+    document.getElementById('beforeChance').addEventListener('input', function() {
+      document.getElementById('beforeChanceValue').textContent = this.value + '%';
+    });
+    document.getElementById('afterChance').addEventListener('input', function() {
+      document.getElementById('afterChanceValue').textContent = this.value + '%';
+    });
+    
+    // Set output column max-height to match Column 1's height.
+    function updateOutputMaxHeight() {
+      const col1 = document.getElementById('col1');
+      const outputCol = document.getElementById('outputColumn');
+      if (col1 && outputCol) {
+        outputCol.style.maxHeight = col1.offsetHeight + "px";
+      }
+    }
+    window.addEventListener('load', updateOutputMaxHeight);
+    window.addEventListener('resize', updateOutputMaxHeight);
+    
+    // Generate words on button click.
+    document.getElementById('generateBtn').addEventListener('click', function() {
+      const numWords = parseInt(document.getElementById('numWords').value, 10);
+      const minLetters = parseInt(document.getElementById('minLetters').value, 10);
+      const maxLetters = parseInt(document.getElementById('maxLetters').value, 10);
+      const letterStyle = document.getElementById('letterStyle').value;
+      const imitate = document.getElementById('imitate').checked;
+      const imitateThreshold = (letterStyle !== "Numbers" && imitate) ? parseInt(document.getElementById('imitateThreshold').value, 10) : 0;
+      
+      if (isNaN(numWords) || numWords <= 0) {
+        alert("Please enter a positive number for the number of words.");
+        return;
+      }
+      if (isNaN(minLetters) || isNaN(maxLetters) || minLetters <= 0 || maxLetters <= 0 || minLetters > maxLetters) {
+        alert("Please ensure that min and max letters are positive numbers and that min is not greater than max.");
+        return;
+      }
+      if (imitate && letterStyle !== "Numbers" && (isNaN(imitateThreshold) || imitateThreshold < 1)) {
+        alert("Please enter a valid imitate threshold (a positive number).");
+        return;
+      }
+      
+      // Set base pool based on Letter Style.
+      let basePool = (letterStyle === "Numbers") ? "0123456789" : "abcdefghijklmnopqrstuvwxyz";
+      let letterPool = basePool;  // Start with the base pool.
+      let vowelPool = "aeiou";    // Used only in non-Numbers mode.
+      
+      // Add additional European letters (in both modes).
+      if (document.getElementById('addGerman').checked) {
+        letterPool += "üöäß";
+        if(letterStyle !== "Numbers") { vowelPool += "üöä"; }
+      }
+      if (document.getElementById('addFrench').checked) {
+        letterPool += "àâçéèêëîïôùûüÿ";
+        if(letterStyle !== "Numbers") { vowelPool += "àâéèêëîïôùûüÿ"; }
+      }
+      if (document.getElementById('addItalian').checked) {
+        letterPool += "àèéìòù";
+        if(letterStyle !== "Numbers") { vowelPool += "àèéìòù"; }
+      }
+      if (document.getElementById('addPolish').checked) {
+        letterPool += "ąćęłńóśźż";
+        if(letterStyle !== "Numbers") { vowelPool += "ąęó"; }
+      }
+      if (document.getElementById('addCzech').checked) {
+        letterPool += "áčďéěíňóřšťúůýž";
+        if(letterStyle !== "Numbers") { vowelPool += "áéěíóúůý"; }
+      }
+      if (document.getElementById('addScandinavian').checked) {
+        letterPool += "æøåäö";
+        if(letterStyle !== "Numbers") { vowelPool += "æøåäö"; }
+      }
+      if (document.getElementById('addIcelandic').checked) {
+        letterPool += "áðéíóúýþæö";
+        if(letterStyle !== "Numbers") { vowelPool += "áéíóúýæö"; }
+      }
+      if (document.getElementById('addDutch').checked) {
+        letterPool += "áéèëïóöü";
+        if(letterStyle !== "Numbers") { vowelPool += "áéèëïóöü"; }
+      }
+      
+      // In Numbers mode, if Interpunctation is checked, add punctuation to the base pool.
+      if (letterStyle === "Numbers" && document.getElementById('addInterpunctation').checked) {
+        const beforePunctuationPool = ["(", "[", "{", "«", "“", "‘", "‹", "„", "‚",
+                                        "$", "£", "€", "¥", "¢", "§", "±", "×", "÷"];
+        const afterPunctuationPool = ["!", "?", ".", ";", ":", ",", "—", "…",
+                                       ")", "]", "}", "”", "’", "»"];
+        letterPool += beforePunctuationPool.join('') + afterPunctuationPool.join('');
+      }
+      
+      // Include Custom Extra Letters via extraPool (they are added later in getRandomLetter if chosen).
+      // Remove duplicates.
+      letterPool = Array.from(new Set(letterPool.split(''))).join('');
+      if(letterStyle !== "Numbers") {
+        vowelPool = Array.from(new Set(vowelPool.split(''))).join('');
+      }
+      
+      let extraPool = document.getElementById('extraLetters').value.trim();
+      if (extraPool.length > 0) {
+        extraPool = Array.from(new Set(extraPool.split(''))).join('');
+      }
+      const extraProbability = parseInt(document.getElementById('extraProbability').value, 10) / 100;
+      const beforeChance = parseInt(document.getElementById('beforeChance').value, 10) / 100;
+      const afterChance = parseInt(document.getElementById('afterChance').value, 10) / 100;
+      
+      // Helper: check if a letter is a consonant (only applicable in non-Numbers mode)
+      function isConsonant(letter, vowels) {
+        return vowels.indexOf(letter.toLowerCase()) === -1;
+      }
+      
+      // Helper: randomly pick a letter.
+      function getRandomLetter(forcedVowel) {
+        if (forcedVowel) {
+          if (extraPool && Math.random() < extraProbability) {
+            let extraVowels = extraPool.split('').filter(ch => vowelPool.includes(ch.toLowerCase()));
+            if (extraVowels.length > 0) {
+              return extraVowels[Math.floor(Math.random() * extraVowels.length)];
+            }
+          }
+          return vowelPool.charAt(Math.floor(Math.random() * vowelPool.length));
+        } else {
+          if (extraPool && Math.random() < extraProbability) {
+            return extraPool.charAt(Math.floor(Math.random() * extraPool.length));
+          } else {
+            return letterPool.charAt(Math.floor(Math.random() * letterPool.length));
+          }
+        }
+      }
+      
+      let words = [];
+      for (let i = 0; i < numWords; i++) {
+        const wordLength = Math.floor(Math.random() * (maxLetters - minLetters + 1)) + minLetters;
+        let word = "";
+        for (let j = 0; j < wordLength; j++) {
+          let letter = "";
+          // Apply imitate functionality only if NOT in Numbers mode.
+          if (letterStyle !== "Numbers" && imitate && imitateThreshold > 0 && word.length >= imitateThreshold) {
+            let allConsonants = true;
+            for (let k = word.length - imitateThreshold; k < word.length; k++) {
+              if (!isConsonant(word[k], vowelPool)) {
+                allConsonants = false;
+                break;
+              }
+            }
+            if (allConsonants) {
+              letter = getRandomLetter(true);
+              word += letter;
+              continue;
+            }
+          }
+          letter = getRandomLetter(false);
+          word += letter;
+        }
+        word = transformWord(word, letterStyle);
+        words.push(word);
+      }
+      
+      // In non-Numbers mode, add punctuation around words if enabled.
+      if (letterStyle !== "Numbers" && document.getElementById('addInterpunctation').checked) {
+        const beforePunctuationPool = ["(", "[", "{", "«", "“", "‘", "‹", "„", "‚",
+                                       "$", "£", "€", "¥", "¢", "§", "±", "×", "÷"];
+        const afterPunctuationPool = ["!", "?", ".", ";", ":", ",", "—", "…",
+                                      ")", "]", "}", "”", "’", "»"];
+        words = words.map(word => {
+          if (Math.random() < beforeChance) {
+            word = beforePunctuationPool[Math.floor(Math.random() * beforePunctuationPool.length)] + word;
+          }
+          if (Math.random() < afterChance) {
+            word = word + afterPunctuationPool[Math.floor(Math.random() * afterPunctuationPool.length)];
+          }
+          return word;
+        });
+      }
+      
+      document.getElementById('result').textContent = words.join(" ");
+    });
+    
+    // Copy to clipboard functionality.
+    document.getElementById('copyBtn').addEventListener('click', function() {
+      const resultText = document.getElementById('result').textContent;
+      navigator.clipboard.writeText(resultText).then(() => {
+        const copyBtn = document.getElementById('copyBtn');
+        const originalText = copyBtn.textContent;
+        copyBtn.textContent = "copied successful";
+        setTimeout(() => {
+          copyBtn.textContent = originalText;
+        }, 4000);
+      }).catch(err => {
+        alert("Failed to copy text: " + err);
+      });
+    });
+  </script>
+</body>
+</html>
