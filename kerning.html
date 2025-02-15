@@ -2,14 +2,18 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Customizable Random Word Generator</title>
+  <title>String generator</title>
   <style>
-    /* Global resets and body font */
+    /* Global resets and system UI font stack */
     * { box-sizing: border-box; }
     body { 
       font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif; 
       margin: 0; 
       padding: 20px; 
+      /* Ensure minimum height so footer is pushed to the bottom */
+      min-height: 100vh; 
+      position: relative;
+      padding-bottom: 60px; /* Reserve space for the footer */
     }
     h1, h2 { margin-top: 0; }
     
@@ -26,7 +30,9 @@
     }
     /* Output column styling */
     .output-column {
-      background-color: #f0f0f0;
+      border: 1px solid #9b9b9e;
+      background-color: #f9f9f9;
+      margin-top: 8px;
       padding: 20px;
       position: relative; /* For positioning the copy button */
       overflow-y: auto;
@@ -73,14 +79,33 @@
     /* Copy-to-clipboard button positioned at top right of output area */
     #copyBtn {
       position: absolute;
-      top: 5px;
-      right: 5px;
+      top: 10px;
+      right: 10px;
       z-index: 2;
+      text-transform: uppercase;
+      
     }
     /* Give the output text some top padding so it's not hidden by the copy button */
     #result {
       margin-top: 40px;
       word-wrap: break-word;
+    }
+    
+    /* Footer styling: sticky to the bottom with very light grey background and bold black top border */
+    footer {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      background-color: #f9f9f9;
+
+      padding: 10px 20px;
+      text-align: center;
+      z-index: 10;
+    }
+    footer a {
+      color: inherit;
+
     }
     
     /* Responsive layout: stack columns vertically on narrow screens */
@@ -91,7 +116,7 @@
   </style>
 </head>
 <body>
-  <h1>Random Word Generator</h1>
+  <h1>Random String Generator</h1>
   
   <div class="container">
     <!-- Column 1: Word Settings & Custom Extra Letters -->
@@ -100,7 +125,7 @@
         <legend>Word Settings</legend>
         <div class="input-group">
           <label for="numWords">Number of Words:</label>
-          <input type="number" id="numWords" min="1" value="5" />
+          <input type="number" id="numWords" min="1" value="50" />
         </div>
         <div class="input-group">
           <label for="minLetters">Min Letters per Word:</label>
@@ -122,18 +147,18 @@
         </div>
         <div class="checkbox-line">
           <input type="checkbox" id="imitate" />
-          <label for="imitate">Imitate (force vowel after N consecutive consonants)</label>
+          <label for="imitate">Imitate natural language <br>(force vowel after N consecutive consonants)</label>
         </div>
         <div class="input-group" id="imitateThresholdGroup">
-          <label for="imitateThreshold">Consecutive Letters Threshold (default is 2):</label>
+          <label for="imitateThreshold">N consecutive letters threshold (default is 2):</label>
           <input type="number" id="imitateThreshold" min="1" value="2" />
         </div>
       </fieldset>
       
       <fieldset>
-        <legend>Custom Extra Letters</legend>
+        <legend>Custom extra letters</legend>
         <div class="input-group">
-          <label for="extraLetters">Additional Letters (used based on probability):</label>
+          <label for="extraLetters">Additional letters (used based on probability):</label>
           <textarea id="extraLetters" rows="3" placeholder="Enter extra letters here"></textarea>
         </div>
         <div class="input-group">
@@ -184,7 +209,7 @@
       </fieldset>
       
       <fieldset>
-        <legend>Interpunctation Settings</legend>
+        <legend>Interpunctation &amp; special chars</legend>
         <div class="checkbox-line">
           <input type="checkbox" id="addInterpunctation" />
           <label for="addInterpunctation">Add Interpunctation</label>
@@ -203,22 +228,28 @@
         </div>
       </fieldset>
       
-      <!-- Generate Button at the bottom of Column 2 -->
+      <!-- Generate Button placed at the bottom of Column 2 -->
       <div class="input-group">
-        <button id="generateBtn">Generate Random Words</button>
+        <button id="generateBtn">🦑 Generate Random Words</button>
       </div>
     </div>
     
     <!-- Column 3: Output Column -->
     <div class="column output-column" id="outputColumn">
       <!-- Copy to Clipboard button at the top right of the output area -->
-      <button id="copyBtn">copy to clipboard</button>
+      <button id="copyBtn">copy</button>
       <div id="result"></div>
     </div>
   </div>
   
+  <!-- Footer -->
+  <footer>
+    <p>This tool is a crude project by Dr. Andi Siess. Use at your own risk.</p>
+    <a href="https://github.com/eisensafran/kerner">GitHub</a> &bullet; <a href="https://andi-siess.de/contact-imprint/" target="_blank">Imprint</a>
+  </footer>
+  
   <script>
-    // Transform the word based on the selected style.
+    // Function to transform the word based on the selected style.
     function transformWord(word, style) {
       if (style === 'uppercase') {
         return word.toUpperCase();
@@ -233,7 +264,7 @@
       } else if (style === 'titlecase') {
         return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
       } else if (style === 'Numbers') {
-        return word; // Do not transform numbers.
+        return word; // In Numbers mode, output remains unchanged.
       }
       return word;
     }
@@ -260,13 +291,32 @@
     window.addEventListener('load', updateOutputMaxHeight);
     window.addEventListener('resize', updateOutputMaxHeight);
     
-    // Generate words on button click.
+    // Function to update disabled states of controls based on checkbox selections.
+    function updateDisabledStates() {
+      // Disable imitateThreshold if imitate is not checked.
+      const imitateCheckbox = document.getElementById('imitate');
+      document.getElementById('imitateThreshold').disabled = !imitateCheckbox.checked;
+      
+      // Disable beforeChance and afterChance sliders if addInterpunctation is not checked.
+      const interpunctationCheckbox = document.getElementById('addInterpunctation');
+      document.getElementById('beforeChance').disabled = !interpunctationCheckbox.checked;
+      document.getElementById('afterChance').disabled = !interpunctationCheckbox.checked;
+    }
+    
+    // Attach change event listeners.
+    document.getElementById('imitate').addEventListener('change', updateDisabledStates);
+    document.getElementById('addInterpunctation').addEventListener('change', updateDisabledStates);
+    // Call on page load.
+    updateDisabledStates();
+    
+    // Generate words when the button is clicked.
     document.getElementById('generateBtn').addEventListener('click', function() {
       const numWords = parseInt(document.getElementById('numWords').value, 10);
       const minLetters = parseInt(document.getElementById('minLetters').value, 10);
       const maxLetters = parseInt(document.getElementById('maxLetters').value, 10);
       const letterStyle = document.getElementById('letterStyle').value;
       const imitate = document.getElementById('imitate').checked;
+      // Imitate is skipped in Numbers mode.
       const imitateThreshold = (letterStyle !== "Numbers" && imitate) ? parseInt(document.getElementById('imitateThreshold').value, 10) : 0;
       
       if (isNaN(numWords) || numWords <= 0) {
@@ -287,7 +337,7 @@
       let letterPool = basePool;  // Start with the base pool.
       let vowelPool = "aeiou";    // Used only in non-Numbers mode.
       
-      // Add additional European letters (in both modes).
+      // Add additional European letters (applies in both modes).
       if (document.getElementById('addGerman').checked) {
         letterPool += "üöäß";
         if(letterStyle !== "Numbers") { vowelPool += "üöä"; }
@@ -330,8 +380,7 @@
         letterPool += beforePunctuationPool.join('') + afterPunctuationPool.join('');
       }
       
-      // Include Custom Extra Letters via extraPool (they are added later in getRandomLetter if chosen).
-      // Remove duplicates.
+      // Remove duplicate characters.
       letterPool = Array.from(new Set(letterPool.split(''))).join('');
       if(letterStyle !== "Numbers") {
         vowelPool = Array.from(new Set(vowelPool.split(''))).join('');
@@ -345,7 +394,7 @@
       const beforeChance = parseInt(document.getElementById('beforeChance').value, 10) / 100;
       const afterChance = parseInt(document.getElementById('afterChance').value, 10) / 100;
       
-      // Helper: check if a letter is a consonant (only applicable in non-Numbers mode)
+      // Helper: check if a letter is a consonant (non-Numbers mode only).
       function isConsonant(letter, vowels) {
         return vowels.indexOf(letter.toLowerCase()) === -1;
       }
@@ -375,7 +424,6 @@
         let word = "";
         for (let j = 0; j < wordLength; j++) {
           let letter = "";
-          // Apply imitate functionality only if NOT in Numbers mode.
           if (letterStyle !== "Numbers" && imitate && imitateThreshold > 0 && word.length >= imitateThreshold) {
             let allConsonants = true;
             for (let k = word.length - imitateThreshold; k < word.length; k++) {
@@ -397,12 +445,12 @@
         words.push(word);
       }
       
-      // In non-Numbers mode, add punctuation around words if enabled.
-      if (letterStyle !== "Numbers" && document.getElementById('addInterpunctation').checked) {
-        const beforePunctuationPool = ["(", "[", "{", "«", "“", "‘", "‹", "„", "‚",
-                                       "$", "£", "€", "¥", "¢", "§", "±", "×", "÷"];
+      // Add punctuation around words if "Add Interpunctation" is checked, regardless of letterStyle.
+      if (document.getElementById('addInterpunctation').checked) {
+        const beforePunctuationPool = ["(", "[", "{", "«", "»", "›" , "“", "‘", "‹", "„", "‚",
+                                       "$", "£", "€", "¥", "¢", "§", "±", "×", "÷", "¡", "¿", "&", "@", "#", "%","©"];
         const afterPunctuationPool = ["!", "?", ".", ";", ":", ",", "—", "…",
-                                      ")", "]", "}", "”", "’", "»"];
+                                      ")", "]", "}", "”", "’", "»", "«", "›", "‹", "%", "‰", "*", "•", "·", "°", "®", "™"];
         words = words.map(word => {
           if (Math.random() < beforeChance) {
             word = beforePunctuationPool[Math.floor(Math.random() * beforePunctuationPool.length)] + word;
